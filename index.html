@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Acquisti Mediateca</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#24543a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Acquisti">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+  html, body { margin: 0; height: 100%; background: #f7eff2; font: 16px/1.4 system-ui, -apple-system, Roboto, sans-serif; color: #1d1b22; }
+  #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #f7eff2; }
+  #attesa { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; background: #f7eff2; text-align: center; padding: 24px; z-index: 2; }
+  #attesa img { width: 120px; height: 120px; border-radius: 26px; }
+  #attesa p { margin: 0; color: #6b6370; }
+  #attesa a { display: none; background: #2e6b45; color: #fff; text-decoration: none; padding: 12px 18px; border-radius: 10px; font-weight: 600; }
+  .spinner { width: 26px; height: 26px; border: 3px solid #eadde2; border-top-color: #2e6b45; border-radius: 50%; animation: gira .8s linear infinite; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="attesa">
+  <img src="icon-192.png" alt="">
+  <div class="spinner"></div>
+  <p id="msg">Apro Acquisti Mediateca…</p>
+  <a id="diretto" href="#">Apri direttamente</a>
+</div>
+<script>
+(function () {
+  'use strict';
+
+  // Indirizzo dell'app web di Apps Script (quello che finisce con /exec)
+  var APP_URL = 'https://script.google.com/macros/s/AKfycbxWV6UrKzf-LAwERQU95srjaGUGlS1iUZd49UZsS92-TRc5xBSns_RJY-F1WzGOqb5Lsw/exec';
+
+  var diretto = document.getElementById('diretto');
+  diretto.href = APP_URL;
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function () { });
+  }
+
+  // Su iPhone e iPad Safari non lascia accedere a Google dentro un riquadro: si apre l'app direttamente.
+  var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (ios) { location.replace(APP_URL); return; }
+
+  // Su Android l'app si apre dentro questa pagina, a tutto schermo.
+  // Se entro qualche secondo non risponde (per esempio perche' serve l'accesso a Google), si apre direttamente.
+  var pronta = false;
+  var frame = document.createElement('iframe');
+  frame.id = 'app';
+  frame.title = 'Acquisti Mediateca';
+  frame.allow = 'camera';
+  frame.src = APP_URL;
+  document.body.appendChild(frame);
+
+  window.addEventListener('message', function (ev) {
+    if (ev.data && ev.data.mediateca === 'pronta') {
+      pronta = true;
+      document.getElementById('attesa').style.display = 'none';
+    }
+  });
+
+  setTimeout(function () {
+    if (!pronta) {
+      document.getElementById('msg').textContent = 'Ci sta mettendo un po\'… Se non si apre, toccare qui sotto.';
+      diretto.style.display = 'inline-block';
+    }
+  }, 6000);
+
+  setTimeout(function () { if (!pronta) location.replace(APP_URL); }, 15000);
+})();
+</script>
+</body>
+</html>
