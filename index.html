@@ -13,24 +13,49 @@
 <meta name="apple-mobile-web-app-title" content="Acquisti">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
-  html, body { margin: 0; height: 100%; background: #f7eff2; font: 16px/1.4 system-ui, -apple-system, Roboto, sans-serif; color: #1d1b22; }
-  #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #f7eff2; }
-  #attesa { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 14px; background: #f7eff2; text-align: center; padding: 24px; z-index: 2; }
-  #attesa img { width: 120px; height: 120px; border-radius: 26px; }
-  #attesa p { margin: 0; color: #6b6370; }
-  #attesa a { display: none; background: #2e6b45; color: #fff; text-decoration: none; padding: 12px 18px; border-radius: 10px; font-weight: 600; }
+  html, body { margin: 0; min-height: 100%; background: #f7eff2; font: 16px/1.45 system-ui, -apple-system, Roboto, sans-serif; color: #1d1b22; }
+  main { max-width: 480px; margin: 0 auto; padding: 32px 22px 40px; text-align: center; }
+  img.logo { width: 132px; height: 132px; border-radius: 28px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  h1 { font-size: 22px; margin: 18px 0 2px; }
+  .sotto { color: #6b6370; margin: 0 0 22px; }
+  .riquadro { background: #fff; border-radius: 14px; padding: 14px 16px; text-align: left; margin: 12px 0; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .riquadro b { display: block; margin-bottom: 4px; }
+  .bottone { display: inline-block; background: #2e6b45; color: #fff; text-decoration: none; padding: 14px 20px; border-radius: 12px; font-weight: 600; margin-top: 14px; }
+  #avvio { display: none; position: fixed; inset: 0; background: #f7eff2; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+  #avvio p { margin: 0; color: #6b6370; }
   .spinner { width: 26px; height: 26px; border: 3px solid #eadde2; border-top-color: #2e6b45; border-radius: 50%; animation: gira .8s linear infinite; }
   @keyframes gira { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
-<div id="attesa">
-  <img src="icon-192.png" alt="">
+
+<!-- Pagina vista nel browser: spiega come installare l'app -->
+<main id="istruzioni">
+  <img class="logo" src="icon-192.png" alt="Logo della Mediateca LGBT e Queer · ARC">
+  <h1>Acquisti Mediateca</h1>
+  <p class="sotto">Mediateca LGBT e Queer · ARC</p>
+
+  <div class="riquadro" id="perAndroid">
+    <b>Su Android (Chrome)</b>
+    Tocca i tre puntini ⋮ in alto a destra → <b style="display:inline">Installa e crea scorciatoia</b> → <b style="display:inline">Installa</b>.
+    Poi apri l'app dall'icona sulla schermata Home.
+  </div>
+  <div class="riquadro" id="perIphone">
+    <b>Su iPhone (Safari)</b>
+    Tocca Condividi (il quadrato con la freccia) → <b style="display:inline">Aggiungi alla schermata Home</b>.
+    Poi apri l'app dall'icona sulla schermata Home.
+  </div>
+
+  <a class="bottone" id="apri" href="#">Apri l'app senza installarla</a>
+</main>
+
+<!-- Schermata mostrata quando si apre l'app installata -->
+<div id="avvio">
+  <img class="logo" src="icon-192.png" alt="">
   <div class="spinner"></div>
   <p id="msg">Apro Acquisti Mediateca…</p>
-  <a id="diretto" href="#">Apri direttamente</a>
 </div>
+
 <script>
 (function () {
   'use strict';
@@ -38,43 +63,28 @@
   // Indirizzo dell'app web di Apps Script (quello che finisce con /exec)
   var APP_URL = 'https://script.google.com/macros/s/AKfycbxWV6UrKzf-LAwERQU95srjaGUGlS1iUZd49UZsS92-TRc5xBSns_RJY-F1WzGOqb5Lsw/exec';
 
-  var diretto = document.getElementById('diretto');
-  diretto.href = APP_URL;
+  document.getElementById('apri').href = APP_URL;
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function () { });
   }
 
-  // Su iPhone e iPad Safari non lascia accedere a Google dentro un riquadro: si apre l'app direttamente.
   var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (ios) { location.replace(APP_URL); return; }
+  document.getElementById(ios ? 'perAndroid' : 'perIphone').style.display = 'none';
 
-  // Su Android l'app si apre dentro questa pagina, a tutto schermo.
-  // Se entro qualche secondo non risponde (per esempio perche' serve l'accesso a Google), si apre direttamente.
-  var pronta = false;
-  var frame = document.createElement('iframe');
-  frame.id = 'app';
-  frame.title = 'Acquisti Mediateca';
-  frame.allow = 'camera';
-  frame.src = APP_URL;
-  document.body.appendChild(frame);
+  // Aperta dall'icona installata? (start_url del manifest contiene ?app=1)
+  var installata = /[?&]app=1\b/.test(location.search) ||
+                   window.navigator.standalone === true ||
+                   (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
 
-  window.addEventListener('message', function (ev) {
-    if (ev.data && ev.data.mediateca === 'pronta') {
-      pronta = true;
-      document.getElementById('attesa').style.display = 'none';
-    }
-  });
-
-  setTimeout(function () {
-    if (!pronta) {
-      document.getElementById('msg').textContent = 'Ci sta mettendo un po\'… Se non si apre, toccare qui sotto.';
-      diretto.style.display = 'inline-block';
-    }
-  }, 6000);
-
-  setTimeout(function () { if (!pronta) location.replace(APP_URL); }, 15000);
+  if (installata) {
+    // Mostrarla dentro questa pagina non funziona (Google richiede l'accesso in una pagina che non si lascia
+    // incorniciare), quindi si apre direttamente l'app di Apps Script.
+    document.getElementById('istruzioni').style.display = 'none';
+    document.getElementById('avvio').style.display = 'flex';
+    location.replace(APP_URL);
+  }
 })();
 </script>
 </body>

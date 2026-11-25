@@ -4,7 +4,7 @@
   "description": "Mediateca LGBT e Queer · ARC: verifica e proposta degli acquisti",
   "lang": "it",
   "id": "./",
-  "start_url": "./",
+  "start_url": "./?app=1",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
